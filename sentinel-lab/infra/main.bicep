@@ -42,6 +42,15 @@ module sentinel 'modules/sentinel.bicep' = {
   }
 }
 
+// Detection rules (KQL loaded from /detections)
+module analyticsRules 'modules/analytics-rules.bicep' = {
+  name: 'analytics-rules-deployment'
+  scope: rg
+  params: {
+    workspaceName: sentinel.outputs.workspaceName
+  }
+}
+
 // Data source 1: send the subscription's Activity Log to the Sentinel workspace
 resource activityLogToSentinel 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
   name: 'activity-to-sentinel'

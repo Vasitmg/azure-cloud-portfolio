@@ -85,6 +85,7 @@ az monitor diagnostic-settings subscription delete --name activity-to-sentinel
 | Rule | Data source | MITRE ATT&CK | File |
 |---|---|---|---|
 | New Azure RBAC role assignment | AzureActivity | T1098 Account Manipulation | [`role-assignment-created.kql`](detections/role-assignment-created.kql) |
+| Security logging or detection tampering | AzureActivity | T1562 Impair Defenses | [`security-logging-tampering.kql`](detections/security-logging-tampering.kql) |
 
 ## Cost control
 

@@ -1,0 +1,38 @@
+// =====================================================================
+// Detection: Security logging or detection tampering
+// ---------------------------------------------------------------------
+// Data source : AzureActivity (subscription Activity Log)
+// MITRE ATT&CK: TA0005 Defense Evasion
+//               T1562 Impair Defenses
+//               (T1562.008 Disable or Modify Cloud Logs)
+// Rule type   : Scheduled query rule
+// Frequency   : every 1 hour, look back 1 hour
+// Severity    : High
+//
+// Why it matters:
+// Before doing damage, attackers often try to blind the defenders:
+// they delete diagnostic settings (log forwarding), the Log Analytics
+// workspace, Sentinel analytics rules or data connectors. Any of these
+// actions should be rare and always reviewed.
+//
+// How to test (safe):
+// Sentinel > Analytics > select "New Azure RBAC role assignment" > Delete.
+// Wait 15-20 minutes, run this query, then restore the rule by running
+// the Bicep deployment again.
+// =====================================================================
+let lookback = 1h;
+let tamperingOperations = dynamic([
+    "MICROSOFT.INSIGHTS/DIAGNOSTICSETTINGS/DELETE",
+    "MICROSOFT.OPERATIONALINSIGHTS/WORKSPACES/DELETE",
+    "MICROSOFT.SECURITYINSIGHTS/ALERTRULES/DELETE",
+    "MICROSOFT.SECURITYINSIGHTS/DATACONNECTORS/DELETE",
+    "MICROSOFT.SECURITYINSIGHTS/AUTOMATIONRULES/DELETE"
+]);
+AzureActivity
+| where TimeGenerated > ago(lookback)
+| where OperationNameValue in~ (tamperingOperations)
+| where ActivityStatusValue =~ "Success"
+| extend Action = tostring(split(OperationNameValue, "/")[-2])
+| project TimeGenerated, Caller, CallerIpAddress, OperationNameValue, Action,
+          TargetResource = _ResourceId, ResourceGroup, CorrelationId
+| order by TimeGenerated desc
