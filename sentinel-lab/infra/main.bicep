@@ -42,6 +42,27 @@ module sentinel 'modules/sentinel.bicep' = {
   }
 }
 
+// Data source 1: send the subscription's Activity Log to the Sentinel workspace
+resource activityLogToSentinel 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'activity-to-sentinel'
+  properties: {
+    workspaceId: sentinel.outputs.workspaceId
+    logs: [for category in [
+      'Administrative'
+      'Security'
+      'ServiceHealth'
+      'Alert'
+      'Recommendation'
+      'Policy'
+      'Autoscale'
+      'ResourceHealth'
+    ]: {
+      category: category
+      enabled: true
+    }]
+  }
+}
+
 output resourceGroupName string = rg.name
 output workspaceName string = sentinel.outputs.workspaceName
 output workspaceId string = sentinel.outputs.workspaceId

@@ -1,0 +1,54 @@
+// =====================================================================
+// Detection: New Azure RBAC role assignment
+// ---------------------------------------------------------------------
+// Data source : AzureActivity (subscription Activity Log)
+// MITRE ATT&CK: TA0003 Persistence / TA0004 Privilege Escalation
+//               T1098 Account Manipulation
+// Rule type   : Scheduled query rule
+// Frequency   : every 1 hour, look back 1 hour
+// Severity    : High for Owner / User Access Administrator / Contributor,
+//               Medium for every other role
+//
+// Why it matters:
+// An attacker who gets into a tenant often grants an account (their own
+// or a new service principal) a powerful role so they keep access even
+// if the original foothold is removed.
+//
+// How it works:
+// Azure logs each role assignment as several events with the same
+// CorrelationId. Only the "Start" event contains the request body with
+// the role and the principal; the "Success" event confirms it worked.
+// The query joins both events on CorrelationId.
+//
+// How to test:
+// Portal > Resource groups > rg-sentinel-lab > Access control (IAM)
+// > Add role assignment > Reader > assign to yourself.
+// Wait 15-20 minutes, then run this query in Sentinel > Logs.
+// Remove the assignment again afterwards.
+// =====================================================================
+let lookback = 1h;
+let privilegedRoles = dynamic([
+    "8e3af657-a8ff-443c-a75c-2fe8c4bcb635",  // Owner
+    "18d7d88d-d35e-4fb5-a5c3-7773c20a72d9",  // User Access Administrator
+    "b24988ac-6180-42a0-ab88-20f7382dd24c"   // Contributor
+]);
+let roleAssignmentEvents = AzureActivity
+    | where TimeGenerated > ago(lookback)
+    | where OperationNameValue =~ "MICROSOFT.AUTHORIZATION/ROLEASSIGNMENTS/WRITE";
+let requests = roleAssignmentEvents
+    | where ActivityStatusValue =~ "Start"
+    | extend Body = todynamic(tostring(Properties_d.requestbody))
+    // keys can be upper- or lower-case, so check both
+    | extend RoleDefinitionId = tostring(coalesce(Body.Properties.RoleDefinitionId, Body.properties.roleDefinitionId))
+    | extend PrincipalId      = tostring(coalesce(Body.Properties.PrincipalId, Body.properties.principalId))
+    | extend PrincipalType    = tostring(coalesce(Body.Properties.PrincipalType, Body.properties.principalType))
+    | extend AssignmentScope  = tostring(coalesce(Body.Properties.Scope, Body.properties.scope))
+    | project CorrelationId, RoleDefinitionId, PrincipalId, PrincipalType, AssignmentScope;
+roleAssignmentEvents
+| where ActivityStatusValue =~ "Success"
+| join kind=leftouter requests on CorrelationId
+| extend RoleGuid = tostring(split(RoleDefinitionId, "/")[-1])
+| extend Severity = iff(RoleGuid in (privilegedRoles), "High", "Medium")
+| project TimeGenerated, Caller, CallerIpAddress, Severity, RoleGuid,
+          PrincipalId, PrincipalType, AssignmentScope, ResourceGroup, CorrelationId
+| order by TimeGenerated desc

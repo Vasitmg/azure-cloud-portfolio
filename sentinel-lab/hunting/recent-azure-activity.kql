@@ -1,0 +1,5 @@
+// Overview of all Azure Activity events in the last hour
+AzureActivity
+| where TimeGenerated > ago(1h)
+| project TimeGenerated, Caller, OperationNameValue, ActivityStatusValue, ResourceGroup
+| order by TimeGenerated desc
