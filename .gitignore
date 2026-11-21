@@ -1,0 +1,4 @@
+.DS_Store
+
+# Bicep build output (regenerate with: az bicep build)
+sentinel-lab/infra/*.json
