@@ -38,6 +38,8 @@ _A proper diagram will be added to `docs/`._
 | Log Analytics workspace | `log-sentinel-lab` (90-day retention, 1 GB/day cap) | `infra/modules/sentinel.bicep` |
 | Microsoft Sentinel | enabled on the workspace | `infra/modules/sentinel.bicep` |
 | Data source: Azure Activity | subscription diagnostic setting `activity-to-sentinel` | `infra/main.bicep` |
+| Playbook | Logic App `pb-incident-email` + automation rule "Email on every new incident" | `playbooks/` |
+| Data source: Entra ID audit logs | tenant diagnostic setting `entra-to-sentinel` | `az rest` (tenant scope, see below) |
 
 ## Repository structure
 
@@ -73,6 +75,15 @@ az deployment sub create --location germanywestcentral \
   --template-file infra/main.bicep
 ```
 
+**Entra ID audit logs** (tenant level, needs Global Administrator):
+
+```bash
+WS_ID=$(az monitor log-analytics workspace show -g rg-sentinel-lab -n log-sentinel-lab --query id -o tsv)
+az rest --method put \
+  --url "https://management.azure.com/providers/microsoft.aadiam/diagnosticSettings/entra-to-sentinel?api-version=2017-04-01" \
+  --body "{\"properties\":{\"workspaceId\":\"$WS_ID\",\"logs\":[{\"category\":\"AuditLogs\",\"enabled\":true}]}}"
+```
+
 **Tear down** (to stop all costs):
 
 ```bash
@@ -86,6 +97,7 @@ az monitor diagnostic-settings subscription delete --name activity-to-sentinel
 |---|---|---|---|
 | New Azure RBAC role assignment | AzureActivity | T1098 Account Manipulation | [`role-assignment-created.kql`](detections/role-assignment-created.kql) |
 | Security logging or detection tampering | AzureActivity | T1562 Impair Defenses | [`security-logging-tampering.kql`](detections/security-logging-tampering.kql) |
+| User added to Entra ID directory role | AuditLogs | T1098.003 Additional Cloud Roles | [`entra-privileged-role-assigned.kql`](detections/entra-privileged-role-assigned.kql) |
 
 ## Cost control
 
@@ -102,9 +114,10 @@ az monitor diagnostic-settings subscription delete --name activity-to-sentinel
 
 - [x] Log Analytics workspace + Microsoft Sentinel via Bicep
 - [x] Azure Activity data source
-- [ ] Microsoft Entra ID audit logs
+- [x] Microsoft Entra ID audit logs
 - [ ] Windows VM with security events (Azure Monitor Agent + data collection rule)
 - [ ] 3–5 custom detection rules deployed as code
-- [ ] Playbook: notify by email / disable user on high-severity incident
+- [x] Playbook: email notification on every new incident (Logic App + automation rule)
+- [ ] Playbook: disable user on high-severity incident
 - [ ] GitHub Actions pipeline: lint → what-if → deploy
 - [ ] Architecture diagram and screenshots in `docs/`

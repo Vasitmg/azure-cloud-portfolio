@@ -141,3 +141,77 @@ resource loggingTamperingRule 'Microsoft.SecurityInsights/alertRules@2024-03-01'
     }
   }
 }
+
+// Rule 3: user added to a Microsoft Entra ID directory role
+// Deploy only after the AuditLogs table exists in the workspace,
+// otherwise Sentinel rejects the rule ("table does not exist").
+resource entraRoleRule 'Microsoft.SecurityInsights/alertRules@2024-03-01' = {
+  name: guid(workspace.id, 'entra-privileged-role-assigned')
+  scope: workspace
+  kind: 'Scheduled'
+  properties: {
+    displayName: 'User added to Entra ID directory role'
+    description: 'Detects a user being added to a Microsoft Entra ID directory role. Highly privileged roles such as Global Administrator are rated High, all others Medium (MITRE T1098.003).'
+    enabled: true
+    query: loadTextContent('../../detections/entra-privileged-role-assigned.kql')
+    queryFrequency: 'PT1H'
+    queryPeriod: 'PT1H'
+    triggerOperator: 'GreaterThan'
+    triggerThreshold: 0
+    severity: 'Medium'
+    suppressionEnabled: false
+    suppressionDuration: 'PT1H'
+    tactics: [
+      'Persistence'
+      'PrivilegeEscalation'
+    ]
+    techniques: [
+      'T1098'
+    ]
+    eventGroupingSettings: {
+      aggregationKind: 'AlertPerResult'
+    }
+    alertDetailsOverride: {
+      alertDisplayNameFormat: '{{TargetUser}} added to {{RoleName}} by {{InitiatedByUser}}'
+      alertSeverityColumnName: 'Severity'
+    }
+    entityMappings: [
+      {
+        entityType: 'Account'
+        fieldMappings: [
+          {
+            identifier: 'FullName'
+            columnName: 'InitiatedByUser'
+          }
+        ]
+      }
+      {
+        entityType: 'Account'
+        fieldMappings: [
+          {
+            identifier: 'FullName'
+            columnName: 'TargetUser'
+          }
+        ]
+      }
+      {
+        entityType: 'IP'
+        fieldMappings: [
+          {
+            identifier: 'Address'
+            columnName: 'InitiatorIp'
+          }
+        ]
+      }
+    ]
+    incidentConfiguration: {
+      createIncident: true
+      groupingConfiguration: {
+        enabled: false
+        reopenClosedIncident: false
+        lookbackDuration: 'PT5H'
+        matchingMethod: 'AllEntities'
+      }
+    }
+  }
+}

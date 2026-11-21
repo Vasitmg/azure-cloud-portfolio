@@ -1,0 +1,119 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workflows_pb_incident_email_name": {
+            "defaultValue": "pb-incident-email",
+            "type": "String"
+        },
+        "notificationEmail": {
+            "defaultValue": "your-email@example.com",
+            "type": "String",
+            "metadata": {
+                "description": "Recipient address for Sentinel incident notification emails."
+            }
+        },
+        "connections_azuresentinel_pb_incident_email_externalid": {
+            "defaultValue": "[format('/subscriptions/{0}/resourceGroups/rg-sentinel-lab/providers/Microsoft.Web/connections/azuresentinel-pb-incident-email', subscription().subscriptionId)]",
+            "type": "String"
+        },
+        "connections_outlook_externalid": {
+            "defaultValue": "[format('/subscriptions/{0}/resourceGroups/rg-sentinel-lab/providers/Microsoft.Web/connections/outlook', subscription().subscriptionId)]",
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Logic/workflows",
+            "apiVersion": "2019-05-01",
+            "name": "[parameters('workflows_pb_incident_email_name')]",
+            "location": "germanywestcentral",
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "state": "Enabled",
+                "definition": {
+                    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {
+                        "$connections": {
+                            "defaultValue": {},
+                            "type": "Object"
+                        }
+                    },
+                    "triggers": {
+                        "Microsoft_Sentinel_incident": {
+                            "type": "ApiConnectionWebhook",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azuresentinel']['connectionId']"
+                                    }
+                                },
+                                "body": {
+                                    "callback_url": "@{listCallbackUrl()}"
+                                },
+                                "path": "/incident-creation"
+                            }
+                        }
+                    },
+                    "actions": {
+                        "Send_an_email_(V2)": {
+                            "runAfter": {},
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['outlook']['connectionId']"
+                                    }
+                                },
+                                "method": "post",
+                                "body": {
+                                    "To": "[parameters('notificationEmail')]",
+                                    "Subject": "Sentinel - @{triggerBody()?['object']?['properties']?['severity']} - @{triggerBody()?['object']?['properties']?['title']}",
+                                    "Body": "<br><p class=\"editor-paragraph\">@{triggerBody()?['object']?['properties']?['description']}</p><br><p class=\"editor-paragraph\">URL: @{triggerBody()?['object']?['properties']?['incidentUrl']}</p>",
+                                    "Importance": "Normal"
+                                },
+                                "path": "/v2/Mail"
+                            }
+                        }
+                    },
+                    "outputs": {}
+                },
+                "parameters": {
+                    "$connections": {
+                        "value": {
+                            "azuresentinel": {
+                                "id": "[format('/subscriptions/{0}/providers/Microsoft.Web/locations/germanywestcentral/managedApis/azuresentinel', subscription().subscriptionId)]",
+                                "connectionId": "[parameters('connections_azuresentinel_pb_incident_email_externalid')]",
+                                "connectionName": "[concat('azuresentinel-', parameters('workflows_pb_incident_email_name'))]",
+                                "connectionProperties": {
+                                    "authentication": {
+                                        "type": "ManagedServiceIdentity"
+                                    }
+                                }
+                            },
+                            "outlook": {
+                                "id": "[format('/subscriptions/{0}/providers/Microsoft.Web/locations/germanywestcentral/managedApis/outlook', subscription().subscriptionId)]",
+                                "connectionId": "[parameters('connections_outlook_externalid')]",
+                                "connectionName": "outlook",
+                                "connectionProperties": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Logic/workflows/accessKeys",
+            "apiVersion": "2015-02-01-preview",
+            "name": "[concat(parameters('workflows_pb_incident_email_name'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Logic/workflows', parameters('workflows_pb_incident_email_name'))]"
+            ],
+            "properties": {}
+        }
+    ]
+}

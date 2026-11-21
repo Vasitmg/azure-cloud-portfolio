@@ -1,0 +1,49 @@
+// =====================================================================
+// Detection: User added to a Microsoft Entra ID directory role
+// ---------------------------------------------------------------------
+// Data source : AuditLogs (Microsoft Entra ID)
+// MITRE ATT&CK: TA0003 Persistence / TA0004 Privilege Escalation
+//               T1098.003 Account Manipulation: Additional Cloud Roles
+// Rule type   : Scheduled query rule
+// Frequency   : every 1 hour, look back 1 hour
+// Severity    : High for highly privileged roles, Medium for all others
+//
+// Why it matters:
+// Directory roles such as Global Administrator control the whole
+// tenant. Granting one is the identity equivalent of an Owner role
+// assignment in Azure and a common persistence step for attackers.
+//
+// How to test:
+// Entra ID > Roles and administrators > Global Reader > Add assignments
+// > select test.user. (Expected: Medium.) Remove it again afterwards.
+// =====================================================================
+let lookback = 1h;
+let highPrivilegeRoles = dynamic([
+    "Global Administrator",
+    "Privileged Role Administrator",
+    "Privileged Authentication Administrator",
+    "Security Administrator",
+    "Conditional Access Administrator",
+    "Application Administrator",
+    "Cloud Application Administrator",
+    "User Administrator",
+    "Authentication Administrator",
+    "Exchange Administrator",
+    "Intune Administrator"
+]);
+AuditLogs
+| where TimeGenerated > ago(lookback)
+| where OperationName =~ "Add member to role"
+| where Result =~ "success"
+| extend Target = TargetResources[0]
+| mv-apply prop = Target.modifiedProperties on (
+    where tostring(prop.displayName) == "Role.DisplayName"
+    | extend RoleName = trim(@'"', tostring(prop.newValue))
+  )
+| extend TargetUser    = tostring(Target.userPrincipalName)
+| extend InitiatedByUser = tostring(coalesce(InitiatedBy.user.userPrincipalName, InitiatedBy.app.displayName))
+| extend InitiatorIp   = tostring(InitiatedBy.user.ipAddress)
+| extend Severity      = iff(RoleName in~ (highPrivilegeRoles), "High", "Medium")
+| project TimeGenerated, InitiatedByUser, InitiatorIp, TargetUser, RoleName,
+          Severity, CorrelationId
+| order by TimeGenerated desc
