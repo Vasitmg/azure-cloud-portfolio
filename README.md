@@ -1,66 +1,50 @@
 # Azure Cloud Portfolio
 
-This repository will contain hands-on Azure cloud and security architecture projects 
-focused on identity security, monitoring, networking, and enterprise governance.
-
-The goal of this portfolio is to demonstrate practical implementation of 
-enterprise-grade Azure security and monitoring architectures.
+Hands-on Azure security projects focused on **identity security, threat detection and monitoring**. Everything is built as code (Bicep, KQL, Logic Apps) and tested against real activity in my own Azure tenant.
 
 ---
 
-## 📂 Portfolio Structure
+## 📂 Projects
 
-Each project will include:
+### 1️⃣ Microsoft Sentinel Detection Lab — 🚧 in progress
 
-- Architecture Overview
-- Architecture Diagram
-- Security Controls Implemented
-- Security Best Practices Applied
-- Skills Demonstrated
-- Future Improvements
-- Testing & Validation Notes
+A working SIEM built from scratch with Infrastructure as Code.
 
----
+- Log Analytics workspace + Microsoft Sentinel deployed with **Bicep**
+- Data sources: **Azure Activity Log** and **Microsoft Entra ID audit logs**
+- **3 custom detection rules** in KQL, mapped to MITRE ATT&CK and deployed as code
+  - New Azure RBAC role assignment (T1098)
+  - Security logging or detection tampering (T1562)
+  - User added to an Entra ID directory role (T1098.003)
+- **Automated response:** Logic App playbook that emails on every new incident
+- Cost controls: daily ingestion cap and budget alerts
 
-## 🔎 Planned Projects
-
-### 1️⃣ Azure Security Monitoring (Planned)
-- Azure Activity Logs
-- Azure Monitor
-- Log Analytics Workspace
-- Alert Rules
-
-📁 `azure-security-monitoring/`
+📁 [`sentinel-lab/`](sentinel-lab/)
 
 ---
 
-### 2️⃣ Azure Sentinel Lab (Planned)
-- Microsoft Sentinel
-- Log ingestion pipelines
-- KQL detection rules
-- Incident workflows
-- Threat investigation dashboards
+### 2️⃣ Azure Security Monitoring baseline — planned
 
-📁 `azure-sentinel-lab/`
+- Azure Monitor alert rules and action groups
+- Defender for Cloud recommendations and secure score
+- Azure Policy for security governance
 
 ---
 
-## 🛡 Security Focus Areas
+## 🛡 Focus areas
 
-- Conditional Access Policies
-- Identity & Access Management (RBAC)
-- Azure AD Hardening
-- Log Analytics & Monitoring
-- Threat Detection Engineering
-- Zero Trust Architecture
-- Security Governance & Compliance
+- Identity & Access Management (Entra ID, RBAC)
+- Threat detection engineering (KQL, MITRE ATT&CK)
+- Security monitoring and automated response (SOAR)
+- Infrastructure as Code (Bicep) and CI/CD
+- Security governance and cost control
 
 ---
 
 ## 🚀 Roadmap
 
-- Build Azure Security Monitoring baseline
-- Implement Microsoft Sentinel SIEM lab
-- Integrate identity protection scenarios
-- Simulate detection use cases
-- Document architecture decisions and trade-offs
+- [x] Microsoft Sentinel lab: infrastructure, data sources, first detections, playbook
+- [ ] Windows VM with security events and endpoint detections
+- [ ] GitHub Actions pipeline: lint → what-if → deploy
+- [ ] Conditional Access and identity protection scenarios
+- [ ] Architecture diagrams and decision records for each project
