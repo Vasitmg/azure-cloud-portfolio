@@ -99,6 +99,23 @@ az monitor diagnostic-settings subscription delete --name activity-to-sentinel
 | Security logging or detection tampering | AzureActivity | T1562 Impair Defenses | [`security-logging-tampering.kql`](detections/security-logging-tampering.kql) |
 | User added to Entra ID directory role | AuditLogs | T1098.003 Additional Cloud Roles | [`entra-privileged-role-assigned.kql`](detections/entra-privileged-role-assigned.kql) |
 
+## Results
+
+The full chain works end to end: **log → detection → incident → playbook → email**.
+
+| Detection | Incident email (redacted) |
+|---|---|
+| New Azure RBAC role assignment | ![RBAC incident email](docs/incident-email-rbac-redacted.png) |
+| User added to Entra ID directory role | ![Entra incident email](docs/incident-email-entra-redacted.png) |
+
+The RBAC rule also caught a real, unplanned event: enabling playbook permissions made Sentinel grant its own service principal the *Microsoft Sentinel Automation Contributor* role. A good reminder that "expected" admin actions still create privileged role assignments worth reviewing.
+
+## Tuning backlog
+
+- Translate role GUIDs into role names in the alert title (e.g. `f4c81013-…` → Microsoft Sentinel Automation Contributor)
+- Deduplicate alerts per `CorrelationId` so one portal action creates one alert
+- Allow-list known automation identities to reduce noise
+
 ## Cost control
 
 - Daily ingestion cap of 1 GB on the workspace

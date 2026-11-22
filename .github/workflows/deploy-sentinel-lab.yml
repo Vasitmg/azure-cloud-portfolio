@@ -1,0 +1,96 @@
+# .github/workflows/deploy-sentinel-lab.yml
+#
+# CI/CD for the Microsoft Sentinel lab.
+#   Pull request -> lint + what-if (shows planned changes, deploys nothing)
+#   Push to main -> lint + what-if + deploy
+#   Manual run   -> same as push to main (Actions tab > Run workflow)
+#
+# Authentication: OpenID Connect (workload identity federation).
+# GitHub issues a short-lived token that Entra ID trusts for this repo,
+# so no client secret is stored anywhere.
+
+name: Deploy Sentinel lab
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sentinel-lab/infra/**"
+      - "sentinel-lab/detections/**"
+      - ".github/workflows/deploy-sentinel-lab.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "sentinel-lab/infra/**"
+      - "sentinel-lab/detections/**"
+      - ".github/workflows/deploy-sentinel-lab.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # needed to request the OIDC token
+  contents: read
+
+concurrency:
+  group: sentinel-lab-deploy
+  cancel-in-progress: false
+
+env:
+  LOCATION: germanywestcentral
+  TEMPLATE: sentinel-lab/infra/main.bicep
+  DEPLOYMENT_NAME: sentinel-lab-${{ github.run_number }}
+
+jobs:
+  validate:
+    name: Lint and what-if
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Bicep
+        run: az bicep install
+
+      - name: Lint Bicep
+        run: az bicep build --file "$TEMPLATE" --stdout > /dev/null
+
+      - name: Sign in to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: What-if
+        run: |
+          az deployment sub what-if \
+            --name "$DEPLOYMENT_NAME" \
+            --location "$LOCATION" \
+            --template-file "$TEMPLATE"
+
+  deploy:
+    name: Deploy
+    needs: validate
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Bicep
+        run: az bicep install
+
+      - name: Sign in to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy
+        run: |
+          az deployment sub create \
+            --name "$DEPLOYMENT_NAME" \
+            --location "$LOCATION" \
+            --template-file "$TEMPLATE" \
+            --query "{state:properties.provisioningState, outputs:properties.outputs}" \
+            -o json

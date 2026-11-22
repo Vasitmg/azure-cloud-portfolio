@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<title>Sentinel Lab</title>
+<style>.g{fill:#0f6cbd}.m{stroke:#0f6cbd}.s{fill:#22b0f0}@media (prefers-color-scheme:dark){.g{fill:#5caeff}.m{stroke:#5caeff}.s{fill:#a8e6ff}}</style>
+<path class="g" fill-rule="evenodd" d="M128 15a113 113 0 1 1 0 226a113 113 0 1 1 0-226zm0 24a89 89 0 1 0 0 178a89 89 0 1 0 0-178z"/>
+<path class="m" d="M135.2 27.3A185 185 0 0 1 135.2 228.7" fill="none" stroke-width="22"/>
+<circle class="s" cx="161" cy="89.5" r="28"/>
+</svg>
