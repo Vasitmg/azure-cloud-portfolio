@@ -215,3 +215,66 @@ resource entraRoleRule 'Microsoft.SecurityInsights/alertRules@2024-03-01' = {
     }
   }
 }
+
+// Rule 4: burst of failed Windows logons (possible brute force)
+// Needs the SecurityEvent table, which exists once the test VM has sent data.
+resource failedLogonRule 'Microsoft.SecurityInsights/alertRules@2024-03-01' = {
+  name: guid(workspace.id, 'windows-failed-logon-burst')
+  scope: workspace
+  kind: 'Scheduled'
+  properties: {
+    displayName: 'Burst of failed Windows logons'
+    description: 'Detects 5 or more failed logons (event 4625) for the same account on the same machine within one hour. 20 or more are rated High (MITRE T1110 Brute Force).'
+    enabled: true
+    query: loadTextContent('../../detections/windows-failed-logon-burst.kql')
+    queryFrequency: 'PT1H'
+    queryPeriod: 'PT1H'
+    triggerOperator: 'GreaterThan'
+    triggerThreshold: 0
+    severity: 'Medium'
+    suppressionEnabled: false
+    suppressionDuration: 'PT1H'
+    tactics: [
+      'CredentialAccess'
+    ]
+    techniques: [
+      'T1110'
+    ]
+    eventGroupingSettings: {
+      aggregationKind: 'AlertPerResult'
+    }
+    alertDetailsOverride: {
+      alertDisplayNameFormat: '{{FailedLogons}} failed logons for {{TargetAccount}} on {{Computer}}'
+      alertSeverityColumnName: 'Severity'
+    }
+    entityMappings: [
+      {
+        entityType: 'Host'
+        fieldMappings: [
+          {
+            identifier: 'HostName'
+            columnName: 'Computer'
+          }
+        ]
+      }
+      {
+        entityType: 'Account'
+        fieldMappings: [
+          {
+            identifier: 'FullName'
+            columnName: 'TargetAccount'
+          }
+        ]
+      }
+    ]
+    incidentConfiguration: {
+      createIncident: true
+      groupingConfiguration: {
+        enabled: false
+        reopenClosedIncident: false
+        lookbackDuration: 'PT5H'
+        matchingMethod: 'AllEntities'
+      }
+    }
+  }
+}

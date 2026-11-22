@@ -1,0 +1,34 @@
+// =====================================================================
+// Detection: Burst of failed Windows logons (possible brute force)
+// ---------------------------------------------------------------------
+// Data source : SecurityEvent (Windows Security log via Azure Monitor Agent)
+// MITRE ATT&CK: TA0006 Credential Access
+//               T1110 Brute Force
+// Rule type   : Scheduled query rule
+// Frequency   : every 1 hour, look back 1 hour
+// Severity    : Medium; High if 20 or more failures
+//
+// Why it matters:
+// Many failed logons (event 4625) for one account on one machine in a
+// short time are a classic sign of password guessing.
+//
+// How to test (VM has no public IP, so we create the failures ourselves):
+// az vm run-command invoke -g rg-sentinel-lab -n vm-lab-win01 \
+//   --command-id RunPowerShellScript --scripts @failed-logons.ps1
+// =====================================================================
+let lookback = 1h;
+let threshold = 5;
+SecurityEvent
+| where TimeGenerated > ago(lookback)
+| where EventID == 4625
+| summarize FailedLogons = count(),
+            FirstAttempt = min(TimeGenerated),
+            LastAttempt  = max(TimeGenerated),
+            LogonTypes   = make_set(LogonType),
+            SourceIps    = make_set(IpAddress)
+          by Computer, TargetAccount
+| where FailedLogons >= threshold
+| extend Severity = iff(FailedLogons >= 20, "High", "Medium")
+| project LastAttempt, Computer, TargetAccount, FailedLogons, FirstAttempt,
+          LogonTypes, SourceIps, Severity
+| order by FailedLogons desc

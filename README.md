@@ -11,13 +11,15 @@ Hands-on Azure security projects focused on **identity security, threat detectio
 A working SIEM built from scratch with Infrastructure as Code.
 
 - Log Analytics workspace + Microsoft Sentinel deployed with **Bicep**
-- Data sources: **Azure Activity Log** and **Microsoft Entra ID audit logs**
-- **3 custom detection rules** in KQL, mapped to MITRE ATT&CK and deployed as code
+- Data sources: **Azure Activity Log**, **Microsoft Entra ID audit logs** and **Windows Security events** (Azure Monitor Agent)
+- **4 custom detection rules** in KQL, mapped to MITRE ATT&CK and deployed as code
   - New Azure RBAC role assignment (T1098)
   - Security logging or detection tampering (T1562)
   - User added to an Entra ID directory role (T1098.003)
+  - Burst of failed Windows logons (T1110)
 - **Automated response:** Logic App playbook that emails on every new incident
-- Cost controls: daily ingestion cap and budget alerts
+- **CI/CD:** GitHub Actions with OIDC (no secrets): lint → what-if → deploy
+- Cost controls: daily ingestion cap, budget alerts, VM auto-shutdown
 
 📁 [`sentinel-lab/`](sentinel-lab/)
 
@@ -44,7 +46,7 @@ A working SIEM built from scratch with Infrastructure as Code.
 ## 🚀 Roadmap
 
 - [x] Microsoft Sentinel lab: infrastructure, data sources, first detections, playbook
-- [ ] Windows VM with security events and endpoint detections
-- [ ] GitHub Actions pipeline: lint → what-if → deploy
+- [x] Windows VM with security events and a brute-force detection
+- [x] GitHub Actions pipeline with OIDC: lint → what-if → deploy
 - [ ] Conditional Access and identity protection scenarios
 - [ ] Architecture diagrams and decision records for each project
