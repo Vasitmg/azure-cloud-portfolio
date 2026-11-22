@@ -18,6 +18,9 @@ param retentionInDays int = 90
 @description('Daily ingestion cap in GB to protect your budget (-1 = no cap)')
 param dailyQuotaGb int = 1
 
+@description('Recipient for incident emails. Empty = playbook is not deployed (set by the pipeline from a GitHub secret)')
+param notificationEmail string = ''
+
 @description('Deploy the Windows test VM (false in the pipeline, true only for a test session)')
 param deployVm bool = false
 
@@ -61,6 +64,17 @@ module analyticsRules 'modules/analytics-rules.bicep' = {
   scope: rg
   params: {
     workspaceName: sentinel.outputs.workspaceName
+  }
+}
+
+// Response: incident email playbook + automation rule (only when an email is supplied)
+module playbook 'modules/playbook.bicep' = if (!empty(notificationEmail)) {
+  name: 'playbook-deployment'
+  scope: rg
+  params: {
+    location: location
+    workspaceName: sentinel.outputs.workspaceName
+    notificationEmail: notificationEmail
   }
 }
 

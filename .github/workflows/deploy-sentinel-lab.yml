@@ -36,6 +36,7 @@ concurrency:
 
 env:
   LOCATION: germanywestcentral
+  NOTIFICATION_EMAIL: ${{ secrets.NOTIFICATION_EMAIL }}
   TEMPLATE: sentinel-lab/infra/main.bicep
   DEPLOYMENT_NAME: sentinel-lab-${{ github.run_number }}
 
@@ -65,7 +66,8 @@ jobs:
           az deployment sub what-if \
             --name "$DEPLOYMENT_NAME" \
             --location "$LOCATION" \
-            --template-file "$TEMPLATE"
+            --template-file "$TEMPLATE" \
+            --parameters notificationEmail="$NOTIFICATION_EMAIL"
 
   deploy:
     name: Deploy
@@ -92,5 +94,6 @@ jobs:
             --name "$DEPLOYMENT_NAME" \
             --location "$LOCATION" \
             --template-file "$TEMPLATE" \
+            --parameters notificationEmail="$NOTIFICATION_EMAIL" \
             --query "{state:properties.provisioningState, outputs:properties.outputs}" \
             -o json

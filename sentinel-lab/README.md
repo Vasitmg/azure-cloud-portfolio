@@ -27,7 +27,7 @@ A hands-on security operations lab on Microsoft Azure. Everything is deployed as
 | Microsoft Sentinel | enabled on the workspace | `infra/modules/sentinel.bicep` |
 | Data source: Azure Activity | subscription diagnostic setting `activity-to-sentinel` | `infra/main.bicep` |
 | Data source: Windows Security events (optional test VM) | `vm-lab-win01` + Azure Monitor Agent + DCR `dcr-windows-security-events`, no public IP, auto-shutdown | `infra/modules/vm.bicep` |
-| Playbook | Logic App `pb-incident-email` + automation rule "Email on every new incident" | `playbooks/` |
+| Playbook | Logic App `pb-incident-email` + automation rule "Email on every new incident" | `infra/modules/playbook.bicep` |
 | Data source: Entra ID audit logs | tenant diagnostic setting `entra-to-sentinel` | `az rest` (tenant scope, see below) |
 
 ## Repository structure
@@ -130,9 +130,10 @@ The RBAC rule also caught a real, unplanned event: enabling playbook permissions
 
 ## Tuning backlog
 
-- Translate role GUIDs into role names in the alert title (e.g. `f4c81013-…` → Microsoft Sentinel Automation Contributor)
-- Deduplicate alerts per `CorrelationId` so one portal action creates one alert
-- Allow-list known automation identities to reduce noise
+- [x] Translate role GUIDs into role names in the alert title (e.g. `f4c81013-…` → Microsoft Sentinel Automation Contributor)
+- [x] Deduplicate role-assignment alerts per `CorrelationId` so one assignment creates one alert
+- [x] Rate *Role Based Access Control Administrator* as High (it can grant access)
+- [ ] Allow-list known automation identities to reduce noise
 
 ## Cost control
 
@@ -157,6 +158,7 @@ The RBAC rule also caught a real, unplanned event: enabling playbook permissions
 - [x] Windows VM with security events (Azure Monitor Agent + data collection rule)
 - [x] 4 custom detection rules deployed as code
 - [x] Playbook: email notification on every new incident (Logic App + automation rule)
+- [x] Playbook and automation rule deployed from the repo (recipient comes from a GitHub secret)
 - [ ] Playbook: disable user on high-severity incident
 - [x] GitHub Actions pipeline with OIDC: lint → what-if → deploy
 - [x] Architecture diagram and screenshots in `docs/`

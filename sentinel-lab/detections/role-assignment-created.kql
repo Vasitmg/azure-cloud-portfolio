@@ -6,7 +6,8 @@
 //               T1098 Account Manipulation
 // Rule type   : Scheduled query rule
 // Frequency   : every 1 hour, look back 1 hour
-// Severity    : High for Owner / User Access Administrator / Contributor,
+// Severity    : High for Owner / Contributor / User Access Administrator /
+//               Role Based Access Control Administrator,
 //               Medium for every other role
 //
 // Why it matters:
@@ -27,10 +28,27 @@
 // Remove the assignment again afterwards.
 // =====================================================================
 let lookback = 1h;
+// Built-in role IDs -> readable names (unknown IDs are shown as the GUID)
+let roleNames = datatable(RoleGuid: string, RoleName: string) [
+    "8e3af657-a8ff-443c-a75c-2fe8c4bcb635", "Owner",
+    "b24988ac-6180-42a0-ab88-20f7382dd24c", "Contributor",
+    "acdd72a7-3385-48ef-bd42-f606fba81ae7", "Reader",
+    "18d7d88d-d35e-4fb5-a5c3-7773c20a72d9", "User Access Administrator",
+    "f58310d9-a9f6-439a-9e8d-f62e7b41a168", "Role Based Access Control Administrator",
+    "ab8e14d6-4a74-4a29-9ba8-549422addade", "Microsoft Sentinel Contributor",
+    "8d289c81-5878-46d4-8554-54e1e3d8b5cb", "Microsoft Sentinel Reader",
+    "3e150937-b8fe-4cfb-8069-0eaf05ecd056", "Microsoft Sentinel Responder",
+    "f4c81013-99ee-4d62-a7ee-b3f1f648599a", "Microsoft Sentinel Automation Contributor",
+    "87a39d53-fc1b-424a-814c-f7e04687dc9e", "Logic App Contributor",
+    "9980e02c-c2be-4d73-94e8-173b1dc7cf3c", "Virtual Machine Contributor",
+    "fb1c8493-542b-48eb-b624-b4c8fea62acd", "Security Admin"
+];
+// Roles that can change resources or grant access -> High
 let privilegedRoles = dynamic([
     "8e3af657-a8ff-443c-a75c-2fe8c4bcb635",  // Owner
+    "b24988ac-6180-42a0-ab88-20f7382dd24c",  // Contributor
     "18d7d88d-d35e-4fb5-a5c3-7773c20a72d9",  // User Access Administrator
-    "b24988ac-6180-42a0-ab88-20f7382dd24c"   // Contributor
+    "f58310d9-a9f6-439a-9e8d-f62e7b41a168"   // Role Based Access Control Administrator
 ]);
 let roleAssignmentEvents = AzureActivity
     | where TimeGenerated > ago(lookback)
@@ -48,7 +66,11 @@ roleAssignmentEvents
 | where ActivityStatusValue =~ "Success"
 | join kind=leftouter requests on CorrelationId
 | extend RoleGuid = tostring(split(RoleDefinitionId, "/")[-1])
+| lookup kind=leftouter roleNames on RoleGuid
+| extend RoleName = iff(isempty(RoleName), RoleGuid, RoleName)
 | extend Severity = iff(RoleGuid in (privilegedRoles), "High", "Medium")
-| project TimeGenerated, Caller, CallerIpAddress, Severity, RoleGuid,
+// one alert per role assignment, even if Azure logs several events for it
+| summarize arg_max(TimeGenerated, *) by CorrelationId
+| project TimeGenerated, Caller, CallerIpAddress, Severity, RoleName, RoleGuid,
           PrincipalId, PrincipalType, AssignmentScope, ResourceGroup, CorrelationId
 | order by TimeGenerated desc

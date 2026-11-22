@@ -16,7 +16,7 @@ resource roleAssignmentRule 'Microsoft.SecurityInsights/alertRules@2024-03-01' =
   kind: 'Scheduled'
   properties: {
     displayName: 'New Azure RBAC role assignment'
-    description: 'Detects a successful Azure role assignment. Owner, Contributor and User Access Administrator are rated High, all other roles Medium. Attackers grant roles to keep access (MITRE T1098).'
+    description: 'Detects a successful Azure role assignment. Owner, Contributor, User Access Administrator and RBAC Administrator are rated High, all other roles Medium. Attackers grant roles to keep access (MITRE T1098).'
     enabled: true
     query: loadTextContent('../../detections/role-assignment-created.kql')
     queryFrequency: 'PT1H'
@@ -37,7 +37,7 @@ resource roleAssignmentRule 'Microsoft.SecurityInsights/alertRules@2024-03-01' =
       aggregationKind: 'AlertPerResult'
     }
     alertDetailsOverride: {
-      alertDisplayNameFormat: 'Role assignment by {{Caller}} (role {{RoleGuid}})'
+      alertDisplayNameFormat: '{{RoleName}} assigned by {{Caller}}'
       alertSeverityColumnName: 'Severity'
     }
     entityMappings: [
