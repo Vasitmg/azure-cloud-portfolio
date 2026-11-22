@@ -16,21 +16,7 @@ A hands-on security operations lab on Microsoft Azure. Everything is deployed as
 
 ## Architecture
 
-```
-Azure subscription
-│
-├── Activity Log ──(diagnostic setting)──┐
-│                                        ▼
-└── rg-sentinel-lab               Log Analytics workspace (log-sentinel-lab)
-                                         │
-                                         ▼
-                                  Microsoft Sentinel
-                                  ├── Analytics rules (KQL)  → detections/
-                                  ├── Incidents
-                                  └── Playbooks (Logic Apps) → playbooks/
-```
-
-_A proper diagram will be added to `docs/`._
+![Architecture of the Microsoft Sentinel detection lab](docs/architecture.svg)
 
 ## What is deployed
 
@@ -173,4 +159,4 @@ The RBAC rule also caught a real, unplanned event: enabling playbook permissions
 - [x] Playbook: email notification on every new incident (Logic App + automation rule)
 - [ ] Playbook: disable user on high-severity incident
 - [x] GitHub Actions pipeline with OIDC: lint → what-if → deploy
-- [ ] Architecture diagram and screenshots in `docs/`
+- [x] Architecture diagram and screenshots in `docs/`
