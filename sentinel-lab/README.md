@@ -34,10 +34,11 @@ A hands-on security operations lab on Microsoft Azure. Everything is deployed as
 
 ```
 sentinel-lab/
-├── infra/        Bicep templates (main.bicep + modules)
-├── detections/   KQL detection rules
-├── playbooks/    Logic App playbooks for automated response
-├── docs/         Diagrams and screenshots
+├── infra/        Bicep: main.bicep + modules (Sentinel, rules, playbook, test VM)
+├── detections/   KQL detection rules (loaded into the analytics rules)
+├── hunting/      KQL hunting queries
+├── scripts/      Report generator and test scripts
+├── docs/         Architecture diagram and screenshots
 └── README.md
 ```
 
@@ -50,6 +51,15 @@ Every push to `main` that touches `infra/` or `detections/` runs [`.github/workf
 3. **Deploy** – `az deployment sub create`
 
 The pipeline signs in with **OpenID Connect (workload identity federation)**: an Entra ID app registration trusts GitHub tokens for this repository only (`main` branch and pull requests). No client secret exists. The app has **Contributor** on the subscription, which can deploy resources but cannot assign roles.
+
+GitHub secrets used by the pipeline:
+
+| Secret | Purpose |
+|---|---|
+| `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` | OIDC sign-in |
+| `NOTIFICATION_EMAIL` | Recipient for incident emails. Without it, the playbook is skipped, so the address never appears in the repo. |
+
+**One-time manual steps** (cannot be automated): the two API connections of the playbook (`azuresentinel-pb-incident-email` with managed identity, `outlook` with an interactive Outlook.com sign-in) and Sentinel's *playbook permissions* on the resource group.
 
 ## Deploy it yourself
 
