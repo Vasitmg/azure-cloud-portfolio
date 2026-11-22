@@ -37,8 +37,8 @@ sentinel-lab/
 ├── infra/        Bicep: main.bicep + modules (Sentinel, rules, playbook, test VM)
 ├── detections/   KQL detection rules (loaded into the analytics rules)
 ├── hunting/      KQL hunting queries
-├── scripts/      Report generator and test scripts
-├── docs/         Architecture diagram and screenshots
+├── scripts/      Report and diagram generators, test scripts, icons (see scripts/icons/README.md)
+├── docs/         Architecture diagram, architecture.md, screenshots
 └── README.md
 ```
 
